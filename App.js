@@ -84,6 +84,10 @@ export default class App extends React.Component {
       require('./assets/dire_dire_ducks_above_water.mp3'),
       require('./assets/dire_dire_ducks_underwater.mp3'),
       require('./assets/wooden-duck.obj'),
+      require('./assets/water-ship.obj'),
+      require('./assets/Tugboat.obj'),
+      require('./assets/fish.obj'),
+      require('./assets/fish_texture.png'),
       require('./assets/wooden-duck.png'),
       require('./assets/waternormals.jpg'),
     ].map((module) => Expo.Asset.fromModule(module).downloadAsync()));
@@ -166,14 +170,41 @@ export default class App extends React.Component {
     // objects (three.js mesh <-> cannon.js body pairs)
     const objects = [];
 
-    // model
-    const modelAsset = Asset.fromModule(require('./assets/wooden-duck.obj'));
+    // model duck
+    const modelAssetDuck = Asset.fromModule(require('./assets/wooden-duck.obj'));
+    await modelAssetDuck.downloadAsync();
+    const loaderDuck = new THREE.OBJLoader();
+    const modelDuck = loaderDuck.parse(
+      await Expo.FileSystem.readAsStringAsync(modelAssetDuck.localUri))
+
+    // model boat
+    const modelAsset = Asset.fromModule(require('./assets/Tugboat.obj'));
     await modelAsset.downloadAsync();
     const loader = new THREE.OBJLoader();
     const model = loader.parse(
       await Expo.FileSystem.readAsStringAsync(modelAsset.localUri))
 
-    // texture
+    // model fish
+    const modelAssetFish = Asset.fromModule(require('./assets/fish.obj'));
+    await modelAssetFish.downloadAsync();
+    const loaderFish = new THREE.OBJLoader();
+    const modelFish = loaderFish.parse(
+      await Expo.FileSystem.readAsStringAsync(modelAssetFish.localUri))
+    
+
+    // texture fish
+    const textureAssetFish = Asset.fromModule(require('./assets/fish_texture.png'));
+    const fishTexture = new THREE.Texture();
+    fishTexture.image = {
+      data: textureAssetFish,
+      width: textureAssetFish.width,
+      height: textureAssetFish.height,
+    };
+    fishTexture.needsUpdate = true;
+    fishTexture.isDataTexture = true; // send to gl.texImage2D() verbatim
+    const fishMaterial =  new THREE.MeshPhongMaterial({map: ballTexture});
+
+    // texture boat
     const textureAsset = Asset.fromModule(require('./assets/wooden-duck.png'));
     const ballTexture = new THREE.Texture();
     ballTexture.image = {
@@ -185,11 +216,52 @@ export default class App extends React.Component {
     ballTexture.isDataTexture = true; // send to gl.texImage2D() verbatim
     const ballMaterial =  new THREE.MeshPhongMaterial({map: ballTexture});
 
-    scaleLongestSideToSize(model, 0.18);
+    // texture duck
+    const textureAssetDuck = Asset.fromModule(require('./assets/wooden-duck.png'));
+    const duckTexture = new THREE.Texture();
+    duckTexture.image = {
+      data: textureAssetDuck,
+      width: textureAssetDuck.width,
+      height: textureAssetDuck.height,
+    };
+    duckTexture.needsUpdate = true;
+    duckTexture.isDataTexture = true; // send to gl.texImage2D() verbatim
+    const duckMaterial =  new THREE.MeshPhongMaterial({map: ballTexture});
 
-    // ball
+    scaleLongestSideToSize(model, .75);
+    scaleLongestSideToSize(modelFish, .60);
+    scaleLongestSideToSize(modelDuck, .25);
+
+    // duck
+    const duckPhysicsMaterial = new CANNON.Material();
+    for (let i = 0; i < 2; ++i) {
+      const duck = {}
+      duck.mesh = modelDuck.clone();
+      duck.mesh.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material = duckMaterial;
+        }
+      });
+      scene.add(duck.mesh);
+      duck.body = new CANNON.Body({
+        mass: 2,
+        shape: new CANNON.Sphere(0.07),
+        material: duckPhysicsMaterial,
+        position: new CANNON.Vec3(Math.random(), 0.5 + 4 * Math.random(), -2 + Math.random() - 0.5),
+        //position: new CANNON.Vec3(Math.random() - 0.5, 3 * Math.random(), -2 + Math.random() - 0.5),
+      });
+      world.add(duck.body);
+      objects.push(duck);
+    }
+    world.addContactMaterial(new CANNON.ContactMaterial(
+      groundMaterial, duckPhysicsMaterial, {
+        restitution: 0.7,
+        friction: 0.6,
+      }));  
+
+    // boat
     const ballPhysicsMaterial = new CANNON.Material();
-    for (let i = 0; i < 20; ++i) {
+    for (let i = 0; i < 2; ++i) {
       const ball = {}
       ball.mesh = model.clone();
       ball.mesh.traverse((child) => {
@@ -203,6 +275,7 @@ export default class App extends React.Component {
         shape: new CANNON.Sphere(0.07),
         material: ballPhysicsMaterial,
         position: new CANNON.Vec3(Math.random() - 0.5, 0.5 + 3 * Math.random(), -2 + Math.random() - 0.5),
+        //position: new CANNON.Vec3(Math.random() - 0.5, 3 * Math.random(), -2 + Math.random() - 0.5),
       });
       world.add(ball.body);
       objects.push(ball);
@@ -212,6 +285,34 @@ export default class App extends React.Component {
         restitution: 0.7,
         friction: 0.6,
       }));
+
+    // fish
+    const fishPhysicsMaterial = new CANNON.Material();
+    for (let i = 0; i < 2; ++i) {
+      const fish = {}
+      fish.mesh = modelFish.clone();
+      fish.mesh.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material = fishMaterial;
+        }
+      });
+      scene.add(fish.mesh);
+      fish.body = new CANNON.Body({
+        mass: 7,
+        shape: new CANNON.Sphere(0.07),
+        material: fishPhysicsMaterial,
+        position: new CANNON.Vec3(Math.random() - 1.0, 0.5 + 5 * Math.random(), -3 + Math.random() - 1.5),
+        //position: new CANNON.Vec3(Math.random() - 0.5, 3 * Math.random(), -2 + Math.random() - 0.5),
+      });
+      world.add(fish.body);
+      objects.push(fish);
+    }
+    world.addContactMaterial(new CANNON.ContactMaterial(
+      groundMaterial, fishPhysicsMaterial, {
+        restitution: 0.7,
+        friction: 0.6,
+      }));
+
 
     // water
     const waterNormals = await ExpoTHREE.createTextureAsync({
