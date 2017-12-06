@@ -301,7 +301,7 @@ export default class App extends React.Component {
         mass: 7,
         shape: new CANNON.Sphere(0.07),
         material: fishPhysicsMaterial,
-        position: new CANNON.Vec3(Math.random() - 1.0, 0.5 + 5 * Math.random(), -3 + Math.random() - 1.5),
+        position: new CANNON.Vec3(Math.random() - 1.0, -3 * Math.random(), -3 + Math.random() - 1.5),
         //position: new CANNON.Vec3(Math.random() - 0.5, 3 * Math.random(), -2 + Math.random() - 0.5),
       });
       world.add(fish.body);
