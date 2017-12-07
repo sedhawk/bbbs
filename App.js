@@ -298,10 +298,10 @@ export default class App extends React.Component {
       });
       scene.add(fish.mesh);
       fish.body = new CANNON.Body({
-        mass: 7,
+        mass: 2,
         shape: new CANNON.Sphere(0.07),
         material: fishPhysicsMaterial,
-        position: new CANNON.Vec3(Math.random() - 1.0, -3 * Math.random(), -3 + Math.random() - 1.5),
+        position: new CANNON.Vec3(Math.random() - 1.0, 20 * Math.random(), -3 + Math.random() - 1.5),
         //position: new CANNON.Vec3(Math.random() - 0.5, 3 * Math.random(), -2 + Math.random() - 0.5),
       });
       world.add(fish.body);
